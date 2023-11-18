@@ -4,7 +4,8 @@ struct client_st{
 	int fd; 
 	char msg[MSGSIZE]; 
 } 
-struct server_st{ int socket;/*server socket file */
+struct server_st{ 
+        int sockfd;/*server socket file */
 	int clientnums;
 	strcut client_st* clients[MAXCLIENT];
 }
@@ -27,7 +28,7 @@ void create_tcp_server(){
 	if(socketfd==-1){
 	}
 	bind();
-	return sockfd;
+        server->sockfd=sockfd;
 }
 void server_init(){
 	memset(server,0,sizeof(*server));
@@ -37,12 +38,33 @@ void server_init(){
 int main(){
 	server_init();	
 	int readset;
-	FD_
-	select();
-	while(1){
-		fd=accept();
-		create_client(fd);
-	}
+	FD_SERO();
+        FD_();
+        for(int i=0;i<server->clientnum;i++){
+                if(server->client[i]){
+                        int fd=server->client[i]->fd; 
+                        FD_();
+                }
+        }
+	int res=select();
+        if(res<0){
+        }
+        else{
+                if(FD_(server->sockfd,readset)){
+                        accept_client();
+                        create_client();
+
+                }
+                for(int i=0;i<server->clientnum;i++){
+                        if(server->client[i]){
+                                if(FD_SET(server->client[i]->fd,readset)){
+                                        read_msg(); 
+
+                                }
+                                
+                        }
+                }
+        }
 
 	return 0;
 }
