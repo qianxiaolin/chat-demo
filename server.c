@@ -24,11 +24,10 @@ void create_tcp_server(){
 	struct sockaddr_in server_addr;
 	server_addr.sin_family;
 	server_addr.sin_port=;
-	sockfd=socket();
-	if(socketfd==-1){
+	sockfd=socket(AF_INET,&server_addr,sizeof(server_addr);
+	if(sockfd<0){
+		perror("socket");
 	}
-	bind();
-        server->sockfd=sockfd;
 }
 void server_init(){
 	memset(server,0,sizeof(*server));
