@@ -1,4 +1,5 @@
 #include<stdio.h>
+#include<sys/socket.h>
 
 
 void socket_init(const char *ip,const char * port){
@@ -19,16 +20,22 @@ void connect_server(){
 	return fd;
 }
 
-void receive_msg(){
-	char *
-	read();
+void receive_msg(int fd){
+	char buff[BUFFSIZE];
+	while(1){
+		int size=read(fd);
+		if(size==0){
+			break;	
+		}
+	}
+	write(stdout,buff,BUFFSIZE);	
 }
 int main(int argc,char *argv[]){
 	if(argc<3){
 		sprintf(stdout,"请使用:<ip> <port>格式");
 		exit(1);
 	}
-	socket_init();
+	socket_init(argv[1],argv[2]);
 	int fd=connect_server();
 	while(1){
 		receive_msg(fd);
