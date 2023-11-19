@@ -1,20 +1,38 @@
 #include<stdio.h>
 
 
-void socket_init(){
+void socket_init(const char *ip,const char * port){
+	int fd;
+	struct sockaddr_in client_addr;
+	client_addr.sin_family=AF_INET;
+	client_addr.sin_port=htons(atoi(ip));
+	inet_pton(AF_INET,ip,client_addr.sin_ip);
 
-	socket();
-	
+	fd=socket(AF_INET,&client_addr,sizeof(client_addr));
+	bind();	
 
 }
+void connect_server(){
+	int fd;
+	sprintf(stdout,"=======connect to server=========");
+	fd=connect();
+	return fd;
+}
 
-
-
-int main(){
-
-
-
-
+void receive_msg(){
+	char *
+	read();
+}
+int main(int argc,char *argv[]){
+	if(argc<3){
+		sprintf(stdout,"请使用:<ip> <port>格式");
+		exit(1);
+	}
+	socket_init();
+	int fd=connect_server();
+	while(1){
+		receive_msg(fd);
+	}
 
 	return 0;
 }
