@@ -25,14 +25,6 @@ void* create_client(int fd){
 void create_tcp_server(){
 	int sockfd;
 	struct sockaddr_in server_addr;
-<<<<<<< HEAD
-	server_addr.sin_family;
-	server_addr.sin_port=;
-	sockfd=socket(AF_INET,&server_addr,sizeof(server_addr);
-	if(sockfd<0){
-		perror("socket");
-	}
-=======
 	server_addr.sin_family=AF_INET;
 	server_addr.sin_port=htons(1989);
         inet_pton(AF_INET,"127.0.0.1",server_addr.sin_addr);
@@ -45,7 +37,6 @@ void create_tcp_server(){
 	bind(socketfd,server_addr.sin_addr,len);
         server->sockfd=sockfd;
         return sockfd;
->>>>>>> 8f9654d3e86981396576828c1a9d35ea0036fba4
 }
 void server_init(){
 	

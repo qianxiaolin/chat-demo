@@ -16,7 +16,14 @@ void socket_init(const char *ip,const char * port){
 void connect_server(){
 	int fd;
 	sprintf(stdout,"=======connect to server=========");
-	fd=connect();
+	struct sockaddr_in addr;
+        addr.sin_family=AF_INET;
+        addr.sin_port=htons(atoi(SERVERPORT));
+        inet_pton(AF_INET,"127.0.0.1",addr.sin_addr);
+        if((fd=conenct(sd,&addr,sizeof(addr)))<0){
+                peror("connect");
+                exit(1);
+        }
 	return fd;
 }
 
@@ -30,6 +37,13 @@ void receive_msg(int fd){
 	}
 	write(stdout,buff,BUFFSIZE);	
 }
+void send_msg(int fd){
+	sprintf(stdout,"input message");
+	char input[1024];
+	gets();
+	fopen();
+	write();
+}
 int main(int argc,char *argv[]){
 	if(argc<3){
 		sprintf(stdout,"请使用:<ip> <port>格式");
@@ -38,7 +52,7 @@ int main(int argc,char *argv[]){
 	socket_init(argv[1],argv[2]);
 	int fd=connect_server();
 	while(1){
-		receive_msg(fd);
+		send_msg(fd);
 	}
 
 	return 0;
