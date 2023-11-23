@@ -2,7 +2,7 @@
 #define MAXCLIENTS 1024 
 #define BUFFSIZE 1024
 struct client_st{ 
-	int fd; 
+	int sockfd; 
 	char msg[MSGSIZE]; 
 } 
 struct server_st{ 
@@ -51,10 +51,24 @@ void read_msg(int fd){
         read(fd,buff,BUFFSIZE);
         puts(buff);
 }
+void send_msg(const void *msg,int fd){
+
+}
 void accept_client(int fd){
         struct sockaddr_in client_addr;
         accept(fd,&client_addr,sizeof(client_addr));
         sprintf(stdout,"IP为%s的用户已加入聊天");
+
+}
+void send_msg_to_all(){
+
+	for(int i=0;i<server->clientnums;i++){
+		if(server->clients[i]){
+			struct client_st *client=server->clients[i];
+			send_msg(msg,client->sockfd);	
+		}
+	}
+
 
 }
 int main(int argc,char *argv[]){
@@ -87,7 +101,8 @@ int main(int argc,char *argv[]){
                 }
                 for(int i=0;i<server->clientnum;i++){
                         if(server->client[i]&&FD_ISSET(server->client[i]->fd,readset)){
-                                read_msg(server->client[i]->fd); 
+                                msg=read_msg(server->client[i]->fd);
+			       	send_msg_to_all();	
                         }
                 }
         }
