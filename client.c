@@ -1,14 +1,13 @@
 #include<stdio.h>
 #include<sys/socket.h>
-#define LOCALHOST "127.0.0.1"
-#define PORT 	  "1989"
+#include"proto.h" 
 /*socket*/
 void socket_init(const char *ip,const char * port){
 	int fd;
 	struct sockaddr_in client_addr;
 	client_addr.sin_family=AF_INET;
-	client_addr.sin_port=htons(atoi(ip));
-	inet_pton(AF_INET,ip,client_addr.sin_ip);
+	client_addr.sin_port=htons(atoi(CLIENT_ADDR));
+	inet_pton(AF_INET,CLIENT_ADDR,client_addr.sin_ip);
 	fd=socket(AF_INET,&client_addr,sizeof(client_addr));
 	if(fd<0){
 		perror("socket");
@@ -22,8 +21,8 @@ void connect_server(){
 	sprintf(stdout,"=======connect to server=========");
 	struct sockaddr_in addr;
         addr.sin_family=AF_INET;
-        addr.sin_port=htons(atoi(PORT));
-        inet_pton(AF_INET,LOCALHOST,addr.sin_addr);
+        addr.sin_port=htons(atoi(SERVER_ADDR));
+        inet_pton(AF_INET,SERVER_ADDR,addr.sin_addr);
         if((fd=conenct(sd,&addr,sizeof(addr)))<0){
                 peror("connect");
                 exit(1);
