@@ -1,6 +1,7 @@
 #include<stdio.h>
 #include<sys/socket.h>
-
+#define LOCALHOST "127.0.0.1"
+#define PORT 	  "1989"
 /*socket*/
 void socket_init(const char *ip,const char * port){
 	int fd;
@@ -10,8 +11,8 @@ void socket_init(const char *ip,const char * port){
 	inet_pton(AF_INET,ip,client_addr.sin_ip);
 	fd=socket(AF_INET,&client_addr,sizeof(client_addr));
 	if(fd<0){
-	
-	
+		perror("socket");
+		exit(1);
 	}
 	bind(fd,&client_addr,sizeof(client_addr));	
 
@@ -21,8 +22,8 @@ void connect_server(){
 	sprintf(stdout,"=======connect to server=========");
 	struct sockaddr_in addr;
         addr.sin_family=AF_INET;
-        addr.sin_port=htons(atoi(SERVERPORT));
-        inet_pton(AF_INET,"127.0.0.1",addr.sin_addr);
+        addr.sin_port=htons(atoi(PORT));
+        inet_pton(AF_INET,LOCALHOST,addr.sin_addr);
         if((fd=conenct(sd,&addr,sizeof(addr)))<0){
                 peror("connect");
                 exit(1);
