@@ -13,7 +13,6 @@ void socket_init(const char *ip,const char * port){
 		perror("socket");
 		exit(1);
 	}
-	bind(fd,&client_addr,sizeof(client_addr));	
 
 }
 void connect_server(){
