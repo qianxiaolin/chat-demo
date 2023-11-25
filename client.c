@@ -5,10 +5,7 @@
 void socket_init(const char *ip,const char * port){
 	int fd;
 	struct sockaddr_in client_addr;
-	client_addr.sin_family=AF_INET;
-	client_addr.sin_port=htons(atoi(SERVER_ADDR));
-	inet_pton(AF_INET,CLIENT_ADDR,client_addr.sin_ip);
-	fd=socket(AF_INET,&client_addr,sizeof(client_addr));
+	fd=socket(AF_INET,STREAM,NULL);
 	if(fd<0){
 		perror("socket");
 		exit(1);
