@@ -6,7 +6,7 @@ void socket_init(const char *ip,const char * port){
 	int fd;
 	struct sockaddr_in client_addr;
 	client_addr.sin_family=AF_INET;
-	client_addr.sin_port=htons(atoi(CLIENT_ADDR));
+	client_addr.sin_port=htons(atoi(SERVER_ADDR));
 	inet_pton(AF_INET,CLIENT_ADDR,client_addr.sin_ip);
 	fd=socket(AF_INET,&client_addr,sizeof(client_addr));
 	if(fd<0){
