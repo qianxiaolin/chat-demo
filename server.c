@@ -1,6 +1,9 @@
 #include<stdio.h>
+#include<stdlib.h>
+#include<proto.h>
 #define MAXCLIENTS 1024 
 #define BUFFSIZE 1024
+#define MSGSIZE  1024
 struct client_st{ 
 	int sockfd; 
 	char msg[MSGSIZE]; 
@@ -14,25 +17,26 @@ struct server_st{
 struct server_st *server;
 
 void* create_client(int fd){
-	struct client_st* client=(struct server_st*)malloc(sizeof(struct server_st));
+	struct client_st* client=(struct client_st*)malloc(sizeof(struct client_st));
         if(client==NULL){
                 return NULL;
         }
 	clients[++clientnums]=client;
-	client->fd=fd;
+	client->sockfd=fd;
 	return client;
 }
 void create_tcp_server(){
 	int sockfd;
-	struct sockaddr_in server_addr;
-	server_addr.sin_family=AF_INET;
-	server_addr.sin_port=htons(1989);
-        inet_pton(AF_INET,"127.0.0.1",server_addr.sin_addr);
-	sockfd=socket(AF_INET,&server_addr,sizeof(server_addr));
+	sockfd=socket(AF_INET,SOCK_STREAM,NULL);
 	if(socketfd==-1){
                 perror("socket");
                 exit(1);
 	}
+	struct sockaddr_in server_addr;
+	server_addr.sin_family=AF_INET;
+	server_addr.sin_port=htons(1989);
+        inet_pton(AF_INET,CLIENT_ADDR,server_addr.sin_addr);
+
         socklen_t len=sizeof(server_addr);
 	bind(socketfd,server_addr.sin_addr,len);
         server->sockfd=sockfd;
@@ -40,9 +44,9 @@ void create_tcp_server(){
 }
 void server_init(){
 	
-	server->sockfd=create_tcp_server();	
         memset(server,0,sizeof(*server));
-	server->clientnum=0;	
+	server->sockfd=create_tcp_server();	
+	server->clientnum=-1;	
         
 }
 void read_msg(int fd){
