@@ -1,11 +1,17 @@
+#include<string.h>
 #include<stdio.h>
 #include<stdlib.h>
-#include<proto.h>
+#include<sys/socket.h>
+#include<sys/select.h>
+#include<sys/types.h>
+#include<arpa/inet.h>
+#include"proto.h"
 #define MAXCLIENTS 1024 
 #define BUFFSIZE 1024
 #define MSGSIZE  1024
 struct client_st{ 
 	int sockfd; 
+	char ipaddr[1024];
 	char msg[MSGSIZE]; 
 } 
 struct server_st{ 
@@ -16,15 +22,7 @@ struct server_st{
 
 struct server_st *server;
 
-void* create_client(int fd){
-	struct client_st* client=(struct client_st*)malloc(sizeof(struct client_st));
-        if(client==NULL){
-                return NULL;
-        }
-	clients[++clientnums]=client;
-	client->sockfd=fd;
-	return client;
-}
+
 void create_tcp_server(){
 	int sockfd;
 	sockfd=socket(AF_INET,SOCK_STREAM,NULL);
@@ -34,12 +32,11 @@ void create_tcp_server(){
 	}
 	struct sockaddr_in server_addr;
 	server_addr.sin_family=AF_INET;
-	server_addr.sin_port=htons(1989);
+	server_addr.sin_port=htons(atoi(SERVER_PORT));
         inet_pton(AF_INET,CLIENT_ADDR,server_addr.sin_addr);
 
         socklen_t len=sizeof(server_addr);
-	bind(socketfd,server_addr.sin_addr,len);
-        server->sockfd=sockfd;
+	bind(socketfd,&server_addr.sin_addr,len);
         return sockfd;
 }
 void server_init(){
@@ -49,31 +46,45 @@ void server_init(){
 	server->clientnum=-1;	
         
 }
-void read_msg(int fd){
-        char buff[BUFFSIZE];
-
-        read(fd,buff,BUFFSIZE);
-        puts(buff);
+void* create_client(int fd){
+	struct client_st* client=(struct client_st*)malloc(sizeof(struct client_st));
+        if(client==NULL){
+                return NULL;
+        }
+	clients[++clientnums]=client;
+	client->sockfd=fd;
+	return client;
 }
-void send_msg(const void *msg,int fd){
 
-}
-void accept_client(int fd){
+int accept_client(int fd){
         struct sockaddr_in client_addr;
-        accept(fd,&client_addr,sizeof(client_addr));
-        sprintf(stdout,"IP为%s的用户已加入聊天");
-
+        int new_fd=accept(fd,&client_addr,sizeof(client_addr));
+	if(new_fd<0){
+		perror("accept error");
+		exit(0);
+	}
+	char ipstr[1024];
+	inet_ntop(AF_INET,&client_addr,&ipstr);
+        fprintf(stdout,"======IP为%s的用户已加入聊天\n",ipstr);
+	return new_fd;
 }
-void send_msg_to_all(){
-
+void send_msg(const void *msg,int size,int fd){
+	write(fd,msg,size);
+	close(fd);
+}
+void send_msg_to_all(struct client_st *client){
 	for(int i=0;i<server->clientnums;i++){
 		if(server->clients[i]){
-			struct client_st *client=server->clients[i];
-			send_msg(msg,client->sockfd);	
+			struct client_st *send_client=server->clients[i];	
+			send_msg(client->msg,MSGSIZE,send_client->sockfd);	
 		}
 	}
-
-
+}
+void read_msg(int i){
+	struct client_st *client=server->clientd[i];
+	memset(client->msg,0,MSGSIZE);
+        read(fd,client->msg,MSGSIZE);
+        puts(client->msg);
 }
 int main(int argc,char *argv[]){
 	server_init();	
@@ -81,9 +92,9 @@ int main(int argc,char *argv[]){
                 fd_set readset;
                 FD_ZERO(&readset);
                 FD_SET(server->sockfd,&readset)
-                for(int i=0;i<server->clientnum;i++){
+                for(int i=0;i<server->clientnums;i++){
                         if(server->client[i]){
-                                int fd=server->client[i]->fd; 
+                                int fd=server->client[i]->sockfd; 
                                 FD_SET(fd,&readset);
                         }
                 }
@@ -94,19 +105,20 @@ int main(int argc,char *argv[]){
                 if(server->clientnums<MAXCLIENT){
                         maxfd=clientnums+1;
                 }
-                int res=select(maxfd+1,readset,NULL,NULL,$tv);
+                int res=select(maxfd+1,readset,NULL,NULL,&tv);
                 if(res<0){
                         perror("select() error");
                         exit(1);
                 }
                 if(FD_ISSET(server->sockfd,readset)){
-                                accept_client();
-                                create_client();
+                                int accept_fd=accept_client();
+                                create_client(accept_fd);
                 }
-                for(int i=0;i<server->clientnum;i++){
-                        if(server->client[i]&&FD_ISSET(server->client[i]->fd,readset)){
-                                msg=read_msg(server->client[i]->fd);
-			       	send_msg_to_all();	
+                for(int i=0;i<server->clientnums;i++){
+			if(server->client[i]==NULL) continue;
+                        if(FD_ISSET(server->clients[i]->sockfd,readset)){
+                                read_msg(i);
+			       	send_msg_to_all(server->clients[i]);	
                         }
                 }
         }
