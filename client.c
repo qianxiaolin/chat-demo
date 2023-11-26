@@ -5,19 +5,19 @@
 void socket_init(const char *ip,const char * port){
 	int fd;
 	struct sockaddr_in client_addr;
-	fd=socket(AF_INET,STREAM,NULL);
+	fd=socket(AF_INET,SO_STREAM,NULL);
 	if(fd<0){
 		perror("socket");
 		exit(1);
 	}
 
 }
-void connect_server(){
+int connect_server(){
 	int fd;
 	sprintf(stdout,"=======connect to server=========");
 	struct sockaddr_in addr;
         addr.sin_family=AF_INET;
-        addr.sin_port=htons(atoi(SERVER_ADDR));
+        addr.sin_port=htons(atoi(SERVER_PORT));
         inet_pton(AF_INET,SERVER_ADDR,addr.sin_addr);
         if((fd=conenct(sd,&addr,sizeof(addr)))<0){
                 peror("connect");
@@ -25,7 +25,7 @@ void connect_server(){
         }
 	return fd;
 }
-
+/*
 void receive_msg(int fd){
 	char buff[BUFFSIZE];
 	while(1){
@@ -34,8 +34,9 @@ void receive_msg(int fd){
 			break;	
 		}
 	}
-	write(stdout,buff,BUFFSIZE);	
+	read(stdout,buff,BUFFSIZE);	
 }
+*/
 void send_msg(int fd){
 	sprintf(stdout,"input message:");
 	char input[1024];
@@ -44,13 +45,15 @@ void send_msg(int fd){
 	close(fd);
 }
 int main(int argc,char *argv[]){
+	/*
 	if(argc<3){
 		sprintf(stdout,"请使用:<ip> <port>格式");
 		exit(1);
 	}
-	socket_init(argv[1],argv[2]);
-	int fd=connect_server();
+	*/
+	socket_init("localhost","1989");
 	while(1){
+		int fd=connect_server();
 		send_msg(fd);
 	}
 
