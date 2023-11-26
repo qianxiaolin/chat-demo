@@ -1,6 +1,7 @@
 #include<string.h>
 #include<stdio.h>
 #include<stdlib.h>
+#include<time.h>
 #include<sys/socket.h>
 #include<sys/select.h>
 #include<sys/types.h>
@@ -13,37 +14,36 @@ struct client_st{
 	int sockfd; 
 	char ipaddr[1024];
 	char msg[MSGSIZE]; 
-} 
+}; 
 struct server_st{ 
         int sockfd;/*server socket file */
 	int clientnums;
-	strcut client_st* clients[MAXCLIENT];
-}
+	struct client_st* clients[MAXCLIENTS];
+};
 
 struct server_st *server;
 
-
-void create_tcp_server(){
+int create_tcp_server(){
 	int sockfd;
 	sockfd=socket(AF_INET,SOCK_STREAM,NULL);
-	if(socketfd==-1){
+	if(sockfd==-1){
                 perror("socket");
                 exit(1);
 	}
 	struct sockaddr_in server_addr;
 	server_addr.sin_family=AF_INET;
 	server_addr.sin_port=htons(atoi(SERVER_PORT));
-        inet_pton(AF_INET,CLIENT_ADDR,server_addr.sin_addr);
+        inet_pton(AF_INET,CLIENT_ADDR,&server_addr.sin_addr);
 
         socklen_t len=sizeof(server_addr);
-	bind(socketfd,&server_addr.sin_addr,len);
+	bind(sockfd,&server_addr.sin_addr,len);
         return sockfd;
 }
 void server_init(){
 	
         memset(server,0,sizeof(*server));
 	server->sockfd=create_tcp_server();	
-	server->clientnum=-1;	
+	server->clientnums=-1;	
         
 }
 void* create_client(int fd){
@@ -51,8 +51,8 @@ void* create_client(int fd){
         if(client==NULL){
                 return NULL;
         }
-	clients[++clientnums]=client;
-	client->sockfd=fd;
+	server->clients[++clientnums]=client;
+	server->client->sockfd=fd;
 	return client;
 }
 
@@ -81,9 +81,9 @@ void send_msg_to_all(struct client_st *client){
 	}
 }
 void read_msg(int i){
-	struct client_st *client=server->clientd[i];
+	struct client_st *client=server->clients[i];
 	memset(client->msg,0,MSGSIZE);
-        read(fd,client->msg,MSGSIZE);
+        read(client->sockfd,client->msg,MSGSIZE);
         puts(client->msg);
 }
 int main(int argc,char *argv[]){
@@ -91,10 +91,10 @@ int main(int argc,char *argv[]){
         while(1){
                 fd_set readset;
                 FD_ZERO(&readset);
-                FD_SET(server->sockfd,&readset)
+                FD_SET(server->sockfd,&readset);
                 for(int i=0;i<server->clientnums;i++){
-                        if(server->client[i]){
-                                int fd=server->client[i]->sockfd; 
+                        if(server->clients[i]){
+                                int fd=server->clients[i]->sockfd; 
                                 FD_SET(fd,&readset);
                         }
                 }
@@ -103,19 +103,19 @@ int main(int argc,char *argv[]){
                 tv.tv_usec = 0;
                 int maxfd;
                 if(server->clientnums<MAXCLIENT){
-                        maxfd=clientnums+1;
+                        maxfd=server->clientnums+1;
                 }
-                int res=select(maxfd+1,readset,NULL,NULL,&tv);
+                int res=select(maxfd+1,&readset,NULL,NULL,&tv);
                 if(res<0){
                         perror("select() error");
                         exit(1);
                 }
                 if(FD_ISSET(server->sockfd,readset)){
-                                int accept_fd=accept_client();
+                                int accept_fd=accept_client(server->sockfd);
                                 create_client(accept_fd);
                 }
                 for(int i=0;i<server->clientnums;i++){
-			if(server->client[i]==NULL) continue;
+			if(server->clients[i]==NULL) continue;
                         if(FD_ISSET(server->clients[i]->sockfd,readset)){
                                 read_msg(i);
 			       	send_msg_to_all(server->clients[i]);	
