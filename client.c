@@ -2,6 +2,7 @@
 #include<arpa/inet.h>
 #include<sys/types.h>
 #include<stdlib.h>
+#include<unistd.h>
 #include<sys/socket.h>
 #include"proto.h" 
 /*socket*/
@@ -22,10 +23,16 @@ int connect_server(int sd){
         addr.sin_family=AF_INET;
         addr.sin_port=htons(atoi(SERVER_PORT));
         inet_pton(AF_INET,SERVER_ADDR,&addr.sin_addr);
-        if((fd=connect(sd,(void *)&addr,sizeof(addr)))<0){
-                perror("connect");
-		return -1;
-        }
+	int connected=0;
+	while(!connected){
+        	if((fd=connect(sd,(void *)&addr,sizeof(addr)))<0){
+                	perror("connect");
+        	}
+		else{
+			break;
+		}
+		sleep(1);
+	}
 	return fd;
 }
 /*
@@ -55,12 +62,9 @@ int main(int argc,char *argv[]){
 	}
 	*/
 	int sd=socket_init("localhost","1989");
+	int fd=connect_server(sd);
 	while(1){
-		int fd=connect_server(sd);
-		if(fd>0){
-			send_msg(fd);
-		}
+		send_msg(fd);	
 	}
-
 	return 0;
 }
