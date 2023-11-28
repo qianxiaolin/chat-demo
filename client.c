@@ -24,7 +24,7 @@ int connect_server(int sd){
         inet_pton(AF_INET,SERVER_ADDR,&addr.sin_addr);
         if((fd=connect(sd,(void *)&addr,sizeof(addr)))<0){
                 perror("connect");
-                exit(1);
+		return -1;
         }
 	return fd;
 }
@@ -57,7 +57,9 @@ int main(int argc,char *argv[]){
 	int sd=socket_init("localhost","1989");
 	while(1){
 		int fd=connect_server(sd);
-		send_msg(fd);
+		if(fd>0){
+			send_msg(fd);
+		}
 	}
 
 	return 0;
