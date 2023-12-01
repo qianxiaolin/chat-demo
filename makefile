@@ -1,8 +1,8 @@
 cc=gcc
 client:client.c proto.h
-	$(cc) $^ -o $@
+	$(cc) -g  $^ -o $@ 
 server:server.c proto.h
-	$(cc) $^ -o $@
+	$(cc) -g $^ -o $@ -g
 
 
 

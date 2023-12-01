@@ -39,8 +39,8 @@ int create_tcp_server(){
 	if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) < 0) {
 		perror("setsockopt SO_REUSEPORT");
 		exit(1);
+	}
 	#endif
-}
 	struct sockaddr_in server_addr;
 	memset(&server_addr,0,sizeof(server_addr));
 	server_addr.sin_family=AF_INET;
@@ -110,8 +110,8 @@ void read_msg(int i){
 }
 int main(int argc,char *argv[]){
 	server_init();	
+        fd_set readset;
         while(1){
-                fd_set readset;
                 FD_ZERO(&readset);
                 FD_SET(server->sockfd,&readset);
                 for(int i=0;i<server->clientnums;i++){
@@ -133,7 +133,7 @@ int main(int argc,char *argv[]){
                         exit(1);
                 }
                 if(FD_ISSET(server->sockfd,&readset)){
-				printf(" try to connect");
+				printf(" try to connect\n");
                                 int accept_fd=accept_client(server->sockfd);
 				FD_SET(accept_fd,&readset);
                                 create_client(accept_fd);
