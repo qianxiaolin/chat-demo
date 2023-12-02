@@ -1,4 +1,5 @@
 #include<string.h>
+#include<errno.h>
 #include<stdio.h>
 #include<stdlib.h>
 #include<time.h>
@@ -80,15 +81,24 @@ void* create_client(int fd){
 int accept_client(int fd){
 	printf("=========try_to_accept_client========\n");
 	fflush(stdout);
-        struct sockaddr client_addr;
-        int new_fd=accept(fd,&client_addr,sizeof(client_addr));
-	if(new_fd==-1){
-		perror("accept error");
-		exit(0);
-	}
+	struct sockaddr_in client_addr;
+	socklen_t len=sizeof(client_addr);
+	int new_fd;
+	while(1){
+		new_fd=accept(fd,(void *)&client_addr,len);
+		if(new_fd==-1){
+			 if (errno == EINTR)
+                		continue; /* Try again. */
+			 else{
+				perror("accept error");
+			 }
+		}
+		break;
+	}	
 	char ipstr[1024];
 	inet_ntop(AF_INET,&client_addr,ipstr,sizeof(ipstr));
-        printf("======IP为%s的用户已加入聊天\n",ipstr);
+	printf("======IP为%s的用户已加入聊天\n",ipstr);
+
 	return new_fd;
 }
 void send_msg(const void *msg,int size,int fd){

@@ -1,4 +1,5 @@
 #include<stdio.h>
+#include<errno.h>
 #include<arpa/inet.h>
 #include<sys/types.h>
 #include<stdlib.h>
@@ -28,8 +29,10 @@ int connect_server(int sd){
         inet_pton(AF_INET,SERVER_ADDR,&addr.sin_addr);
 	int connected=0;
         if((fd=connect(sd,(void *)&addr,sizeof(addr)))==-1){
+		if (errno != EINPROGRESS){
                 	perror("connect");
 			return -1;
+		}
         }
 	else{
 		printf("connect fd =%d\n",fd);
