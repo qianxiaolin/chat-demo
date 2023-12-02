@@ -27,11 +27,14 @@ int connect_server(int sd){
         addr.sin_port=htons(atoi(SERVER_PORT));
         inet_pton(AF_INET,SERVER_ADDR,&addr.sin_addr);
 	int connected=0;
-        if((fd=connect(sd,(void *)&addr,sizeof(addr)))<0){
+        if((fd=connect(sd,(void *)&addr,sizeof(addr)))==-1){
                 	perror("connect");
 			return -1;
         }
-	printf("========success connect=========");
+	else{
+		printf("connect fd =%d\n",fd);
+	}
+	printf("========success connect=========\n");
 	return fd;
 }
 
@@ -41,9 +44,12 @@ void receive_msg(int fd){
 	write(stdout,buff,BUFFSIZE);
 }
 void send_msg(int fd){
-	fprintf(fd,"input message:");
+	printf("input message:");
 	char input[1024];
-	scanf("%s",&input);
+	int nread;
+	if((nread=read(fd,input,BUFFSIZE))<0){
+		perror("read");	
+	}
 	write(fd,input,sizeof(input));
 }
 int main(int argc,char *argv[]){
@@ -66,9 +72,11 @@ int main(int argc,char *argv[]){
 		}
 		else if(events){
 			if(FD_ISSET(stdin_fd,&readset)){
+				printf("send\n");
 				send_msg(fd);
 			}	
 			if(FD_ISSET(fd,&readset)){
+				printf("receive msg");
 				receive_msg(fd);
 			}
 		}

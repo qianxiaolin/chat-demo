@@ -51,7 +51,7 @@ int create_tcp_server(){
 		perror("bind");
 		exit(1);
 	}
-	puts("-------successs create tcp server----------");
+	printf("-------successs create tcp server----------\n");
 	if(listen(sockfd,511)<-1){
 		perror("listen");
 		exit(1);
@@ -63,11 +63,11 @@ void server_init(){
         memset(server,0,sizeof(*server));
 	server->sockfd=create_tcp_server();	
 	server->clientnums=-1;	
-	create_tcp_server();        
 }
 void* create_client(int fd){
 	struct client_st* client=(struct client_st*)malloc(sizeof(struct client_st));
         if(client==NULL){
+		fprintf(stdout,"malloc error\n");
                 return NULL;
         }
 	client->sockfd=fd;
@@ -78,16 +78,17 @@ void* create_client(int fd){
 }
 
 int accept_client(int fd){
-	printf("=========accept_client========");
-        struct sockaddr_in client_addr;
+	printf("=========try_to_accept_client========\n");
+	fflush(stdout);
+        struct sockaddr client_addr;
         int new_fd=accept(fd,&client_addr,sizeof(client_addr));
-	if(new_fd<0){
+	if(new_fd==-1){
 		perror("accept error");
 		exit(0);
 	}
 	char ipstr[1024];
 	inet_ntop(AF_INET,&client_addr,ipstr,sizeof(ipstr));
-        fprintf(stdout,"======IP为%s的用户已加入聊天\n",ipstr);
+        printf("======IP为%s的用户已加入聊天\n",ipstr);
 	return new_fd;
 }
 void send_msg(const void *msg,int size,int fd){
@@ -117,35 +118,43 @@ int main(int argc,char *argv[]){
                 for(int i=0;i<server->clientnums;i++){
                         if(server->clients[i]){
                                 int fd=(server->clients[i])->sockfd; 
+				printf("add to set\n");
                                 FD_SET(fd,&readset);
                         }
                 }
                 struct timeval tv;
-                tv.tv_sec = 1; // 1 sec timeout
+                tv.tv_sec = 2; // 1 sec timeout
                 tv.tv_usec = 0;
                 int maxfd;
                 if(server->clientnums<MAXCLIENTS){
                         maxfd=server->clientnums+1;
                 }
-                int res=select(maxfd+1,&readset,NULL,NULL,&tv);
+		else{
+			maxfd=MAXCLIENTS;
+		}
+                int res=select(maxfd,&readset,NULL,NULL,&tv);
                 if(res<0){
                         perror("select() error");
                         exit(1);
                 }
-                if(FD_ISSET(server->sockfd,&readset)){
-				printf(" try to connect\n");
-                                int accept_fd=accept_client(server->sockfd);
+		else if(res){
+			printf("listen a file change\n");
+		}
+		if(FD_ISSET(server->sockfd,&readset)){
+				int accept_fd=accept_client(server->sockfd);
+				printf("accept_client\n");
 				FD_SET(accept_fd,&readset);
-                                create_client(accept_fd);
-                }
-                for(int i=0;i<server->clientnums;i++){
+				create_client(accept_fd);
+		}
+		for(int i=0;i<server->clientnums;i++){
 			if(server->clients[i]==NULL) continue;
-			int fd=server->clients[i]->sockfd;
-                        if(FD_ISSET(fd,&readset)){
-                                read_msg(i);
-			       	send_msg_to_all(server->clients[i]);	
-                        }
-                }
+			int clientfd=server->clients[i]->sockfd;
+			if(FD_ISSET(clientfd,&readset)){
+				printf("have file change\n");
+				read_msg(i);
+				send_msg_to_all(server->clients[i]);	
+			}
+		}
         }
 	
 
