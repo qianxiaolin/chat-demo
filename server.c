@@ -1,4 +1,5 @@
 #include<string.h>
+#include <netinet/tcp.h>
 #include<errno.h>
 #include<stdio.h>
 #include<stdlib.h>
@@ -7,6 +8,7 @@
 #include<sys/select.h>
 #include<sys/types.h>
 #include<arpa/inet.h>
+#include<fcntl.h>
 #include"proto.h"
 #define MAXCLIENTS 1024 
 #define BUFFSIZE 1024
@@ -23,6 +25,19 @@ struct server_st{
 };
 
 struct server_st *server;
+int sock_set_nodelay(int fd){
+	int flags, yes = 1;
+
+    /* Set the socket nonblocking.
+     * Note that fcntl(2) for F_GETFL and F_SETFL can't be
+     * interrupted by a signal. */
+	if ((flags = fcntl(fd, F_GETFL)) == -1) return -1;
+	if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) return -1;
+
+    /* This is best-effort. No need to check for errors. */
+	setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &yes, sizeof(yes));
+	return 0;
+}
 
 int create_tcp_server(){
 	int sockfd;
@@ -57,6 +72,7 @@ int create_tcp_server(){
 		perror("listen");
 		exit(1);
 	}
+	sock_set_nodelay(sockfd);
         return sockfd;
 }
 void server_init(){
@@ -71,8 +87,14 @@ void* create_client(int fd){
 		fprintf(stdout,"malloc error\n");
                 return NULL;
         }
+	printf("success create client\n");
+	if(!sock_set_nodelay(fd)){
+		printf("set socket nodelay error");
+	}
 	client->sockfd=fd;
 	server->clientnums++;
+	char *msg="welcome to chat\n";
+	write(fd,msg,sizeof(msg));
 	int clientindex=server->clientnums;
 	server->clients[clientindex]=client;
 	return client;
@@ -98,7 +120,10 @@ int accept_client(int fd){
 	char ipstr[1024];
 	inet_ntop(AF_INET,&client_addr,ipstr,sizeof(ipstr));
 	printf("======IP为%s的用户已加入聊天\n",ipstr);
-
+	int set=sock_set_nodelay(new_fd);
+	if(set==-1){
+		printf("set sock nodelay error\n");
+	}
 	return new_fd;
 }
 void send_msg(const void *msg,int size,int fd){
@@ -115,58 +140,62 @@ void send_msg_to_all(struct client_st *client){
 }
 void read_msg(int i){
 	struct client_st *client=server->clients[i];
-	memset(client->msg,0,MSGSIZE);
-        read(client->sockfd,client->msg,MSGSIZE);
+	memset(&client->msg,0,MSGSIZE);
+	int nread;
+        if((nread=read(client->sockfd,client->msg,MSGSIZE))<0){
+		perror("read client msg error");
+	}
         puts(client->msg);
 }
 int main(int argc,char *argv[]){
 	server_init();	
-        fd_set readset;
         while(1){
+        	fd_set readset;
                 FD_ZERO(&readset);
                 FD_SET(server->sockfd,&readset);
+		int maxfd=0;
                 for(int i=0;i<server->clientnums;i++){
                         if(server->clients[i]){
                                 int fd=(server->clients[i])->sockfd; 
 				printf("add to set\n");
                                 FD_SET(fd,&readset);
+				if(maxfd<fd)
+					maxfd=fd;
                         }
                 }
                 struct timeval tv;
-                tv.tv_sec = 2; // 1 sec timeout
+                tv.tv_sec = 1; // 1 sec timeout
                 tv.tv_usec = 0;
-                int maxfd;
-                if(server->clientnums<MAXCLIENTS){
-                        maxfd=server->clientnums+1;
+                if(maxfd<server->sockfd){
+                        maxfd=server->sockfd;
                 }
-		else{
-			maxfd=MAXCLIENTS;
-		}
-                int res=select(maxfd,&readset,NULL,NULL,&tv);
-                if(res<0){
+                int res=select(maxfd+1,&readset,NULL,NULL,NULL);
+                if(res==-1){
                         perror("select() error");
                         exit(1);
                 }
 		else if(res){
-			printf("listen a file change\n");
-		}
-		if(FD_ISSET(server->sockfd,&readset)){
+			if(FD_ISSET(server->sockfd,&readset)){
 				int accept_fd=accept_client(server->sockfd);
-				printf("accept_client\n");
-				FD_SET(accept_fd,&readset);
 				create_client(accept_fd);
-		}
-		for(int i=0;i<server->clientnums;i++){
-			if(server->clients[i]==NULL) continue;
-			int clientfd=server->clients[i]->sockfd;
-			if(FD_ISSET(clientfd,&readset)){
-				printf("have file change\n");
-				read_msg(i);
-				send_msg_to_all(server->clients[i]);	
 			}
-		}
-        }
-	
 
+			printf("listen a file change\n");
+			printf("num of client:%d",server->clientnums);
+			for(int i=0;i<server->clientnums;i++){
+				printf("loop client");
+				if(server->clients[i]==NULL) continue;
+				int clientfd=server->clients[i]->sockfd;
+				if(FD_ISSET(clientfd,&readset)){
+					printf("have file change\n");
+					read_msg(i);
+					send_msg_to_all(server->clients[i]);	
+				}
+			}
+
+			
+		}
+	
+	}
 	return 0;
 }

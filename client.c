@@ -1,5 +1,6 @@
 #include<stdio.h>
 #include<errno.h>
+#include <netinet/tcp.h>
 #include<arpa/inet.h>
 #include<sys/types.h>
 #include<stdlib.h>
@@ -7,6 +8,7 @@
 #include<sys/socket.h>
 #include<sys/select.h>
 #include<time.h>
+#include<fcntl.h>
 #include"proto.h" 
 #define BUFFSIZE 1024
 /*socket*/
@@ -19,6 +21,19 @@ int socket_init(const char *ip,const char * port){
 		exit(1);
 	}
 	return fd;
+}
+int sock_set_nodelay(int fd){
+	int flags, yes = 1;
+
+    /* Set the socket nonblocking.
+     * Note that fcntl(2) for F_GETFL and F_SETFL can't be
+     * interrupted by a signal. */
+	if ((flags = fcntl(fd, F_GETFL)) == -1) return -1;
+	if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) return -1;
+
+    /* This is best-effort. No need to check for errors. */
+	setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &yes, sizeof(yes));
+	return 0;
 }
 int connect_server(int sd){
 	int fd;
@@ -38,27 +53,35 @@ int connect_server(int sd){
 		printf("connect fd =%d\n",fd);
 	}
 	printf("========success connect=========\n");
+	int set=sock_set_nodelay(fd);
+	if(set==-1){
+		printf("set sock nodelay error\n");
+	}
 	return fd;
 }
 
-void receive_msg(int fd){
+void receive_msg(int sockfd){
 	char buff[BUFFSIZE];
-	read(fd,buff,BUFFSIZE);	
-	write(stdout,buff,BUFFSIZE);
+	int nread=read(sockfd,buff,BUFFSIZE);	
+	if(nread<0){
+		perror("read remote msg error");
+	}
+	write(fileno(stdout),buff,nread);
 }
-void send_msg(int fd){
+void send_msg(int stdin_fd,int sockfd){
 	printf("input message:");
 	char input[1024];
 	int nread;
-	if((nread=read(fd,input,BUFFSIZE))<0){
+	/*标准输入中读取数据*/
+	if((nread=read(stdin_fd,input,BUFFSIZE))<0){
 		perror("read");	
 	}
-	write(fd,input,sizeof(input));
+	write(sockfd,input,sizeof(nread));
 }
 int main(int argc,char *argv[]){
 	int sd=socket_init("localhost","1989");
 	int fd=connect_server(sd);
-	if(fd<0){
+	if(fd==-1){
 		exit(1);
 	}	
 	int stdin_fd=fileno(stdin);
@@ -75,8 +98,7 @@ int main(int argc,char *argv[]){
 		}
 		else if(events){
 			if(FD_ISSET(stdin_fd,&readset)){
-				printf("send\n");
-				send_msg(fd);
+				send_msg(stdin_fd,fd);
 			}	
 			if(FD_ISSET(fd,&readset)){
 				printf("receive msg");
