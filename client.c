@@ -22,19 +22,6 @@ int socket_init(const char *ip,const char * port){
 	}
 	return fd;
 }
-int sock_set_nodelay(int fd){
-	int flags, yes = 1;
-
-    /* Set the socket nonblocking.
-     * Note that fcntl(2) for F_GETFL and F_SETFL can't be
-     * interrupted by a signal. */
-	if ((flags = fcntl(fd, F_GETFL)) == -1) return -1;
-	if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) return -1;
-
-    /* This is best-effort. No need to check for errors. */
-	setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &yes, sizeof(yes));
-	return 0;
-}
 int connect_server(int sd){
 	int fd;
 	fprintf(stdout,"=======connect to server=========\n");
@@ -53,10 +40,6 @@ int connect_server(int sd){
 		printf("connect fd =%d\n",fd);
 	}
 	printf("========success connect=========\n");
-	int set=sock_set_nodelay(fd);
-	if(set==-1){
-		printf("set sock nodelay error\n");
-	}
 	return fd;
 }
 
@@ -66,17 +49,27 @@ void receive_msg(int sockfd){
 	if(nread<0){
 		perror("read remote msg error");
 	}
-	write(fileno(stdout),buff,nread);
+	int nwrite=0;
+	nwrite=write(fileno(stdout),buff,nread);
+	if(nwrite<0){
+		perror("write to stdout error");
+	}
 }
 void send_msg(int stdin_fd,int sockfd){
-	printf("input message:");
 	char input[1024];
 	int nread;
 	/*标准输入中读取数据*/
 	if((nread=read(stdin_fd,input,BUFFSIZE))<0){
 		perror("read");	
 	}
-	write(sockfd,input,sizeof(nread));
+	else{
+		fprintf(stdout,"input msg:%s",input);
+	}
+	int nwrite=0;
+	nwrite=write(sockfd,input,sizeof(nread));
+	if(nwrite<0){
+		perror("write to sock error");
+	}
 }
 int main(int argc,char *argv[]){
 	int sd=socket_init("localhost","1989");
@@ -90,18 +83,28 @@ int main(int argc,char *argv[]){
 		FD_ZERO(&readset);
 		FD_SET(stdin_fd,&readset);
 		FD_SET(fd,&readset);
-
-		int events=select(3,&readset,NULL,NULL,NULL);
+		int maxfd=stdin_fd>fd?stdin_fd:fd;
+		int events=select(maxfd+1,&readset,NULL,NULL,NULL);
 		if(events<0){
 			perror("select:");
 			exit(1);
 		}
 		else if(events){
 			if(FD_ISSET(stdin_fd,&readset)){
-				send_msg(stdin_fd,fd);
+			//	send_msg(stdin_fd,fd);
+				char input[1024];
+				int nread;
+				/*标准输入中读取数据*/
+				if((nread=read(stdin_fd,input,BUFFSIZE))<0){
+					perror("read");	
+				}
+				else{
+					fprintf(stdout,"input msg:%s",input);
+				}
+
 			}	
 			if(FD_ISSET(fd,&readset)){
-				printf("receive msg");
+				printf("receive msg:");
 				receive_msg(fd);
 			}
 		}

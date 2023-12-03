@@ -72,7 +72,6 @@ int create_tcp_server(){
 		perror("listen");
 		exit(1);
 	}
-	sock_set_nodelay(sockfd);
         return sockfd;
 }
 void server_init(){
@@ -120,10 +119,7 @@ int accept_client(int fd){
 	char ipstr[1024];
 	inet_ntop(AF_INET,&client_addr,ipstr,sizeof(ipstr));
 	printf("======IP为%s的用户已加入聊天\n",ipstr);
-	int set=sock_set_nodelay(new_fd);
-	if(set==-1){
-		printf("set sock nodelay error\n");
-	}
+	
 	return new_fd;
 }
 void send_msg(const void *msg,int size,int fd){
@@ -154,10 +150,9 @@ int main(int argc,char *argv[]){
                 FD_ZERO(&readset);
                 FD_SET(server->sockfd,&readset);
 		int maxfd=0;
-                for(int i=0;i<server->clientnums;i++){
+                for(int i=0;i<=server->clientnums;i++){
                         if(server->clients[i]){
                                 int fd=(server->clients[i])->sockfd; 
-				printf("add to set\n");
                                 FD_SET(fd,&readset);
 				if(maxfd<fd)
 					maxfd=fd;
@@ -179,11 +174,10 @@ int main(int argc,char *argv[]){
 				int accept_fd=accept_client(server->sockfd);
 				create_client(accept_fd);
 			}
-
 			printf("listen a file change\n");
-			printf("num of client:%d",server->clientnums);
-			for(int i=0;i<server->clientnums;i++){
-				printf("loop client");
+			printf("num of client:%d\n",server->clientnums);
+			for(int i=0;i<=server->clientnums;i++){
+				printf("loop client\n");
 				if(server->clients[i]==NULL) continue;
 				int clientfd=server->clients[i]->sockfd;
 				if(FD_ISSET(clientfd,&readset)){
