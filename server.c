@@ -35,7 +35,6 @@ int sock_set_nodelay(int fd){
 	if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) return -1;
 
     /* This is best-effort. No need to check for errors. */
-	setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &yes, sizeof(yes));
 	return 0;
 }
 
@@ -93,6 +92,7 @@ void* create_client(int fd){
 	client->sockfd=fd;
 	server->clientnums++;
 	char *msg="welcome to chat\n";
+	strncpy(client->msg, msg, MSGSIZE);
 	write(fd,msg,sizeof(msg));
 	int clientindex=server->clientnums;
 	server->clients[clientindex]=client;
@@ -119,7 +119,7 @@ int accept_client(int fd){
 	char ipstr[1024];
 	inet_ntop(AF_INET,&client_addr,ipstr,sizeof(ipstr));
 	printf("======IP为%s的用户已加入聊天\n",ipstr);
-	
+	sock_set_nodelay(new_fd);	
 	return new_fd;
 }
 void send_msg(const void *msg,int size,int fd){

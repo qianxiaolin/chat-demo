@@ -62,13 +62,13 @@ void send_msg(int stdin_fd,int sockfd){
 	if((nread=read(stdin_fd,input,BUFFSIZE))<0){
 		perror("read");	
 	}
-	else{
+	else if(nread>0){
 		fprintf(stdout,"input msg:%s",input);
-	}
-	int nwrite=0;
-	nwrite=write(sockfd,input,sizeof(nread));
-	if(nwrite<0){
-		perror("write to sock error");
+		int nwrite=0;
+		nwrite=write(sockfd,input,nread);
+		if(nwrite<0){
+			perror("write to sock error");
+		}
 	}
 }
 int main(int argc,char *argv[]){
@@ -90,17 +90,20 @@ int main(int argc,char *argv[]){
 			exit(1);
 		}
 		else if(events){
+			printf("have select event activate");
 			if(FD_ISSET(stdin_fd,&readset)){
 			//	send_msg(stdin_fd,fd);
 				char input[1024];
 				int nread;
 				/*标准输入中读取数据*/
-				if((nread=read(stdin_fd,input,BUFFSIZE))<0){
-					perror("read");	
+				while(1){
+					if((nread=read(stdin_fd,input,1))<0){
+						perror("read");	
+						exit(1);
+						break;
+					}
 				}
-				else{
-					fprintf(stdout,"input msg:%s",input);
-				}
+				fprintf(stdout,"input msg:%s",input);
 
 			}	
 			if(FD_ISSET(fd,&readset)){
