@@ -86,16 +86,16 @@ void* create_client(int fd){
                 return NULL;
         }
 	printf("success create client\n");
-	if(!sock_set_nodelay(fd)){
-		printf("set socket nodelay error");
-	}
 	client->sockfd=fd;
 	server->clientnums++;
-	char *msg="welcome to chat\n";
-	strncpy(client->msg, msg, MSGSIZE);
-	write(fd,msg,sizeof(msg));
 	int clientindex=server->clientnums;
 	server->clients[clientindex]=client;
+
+	char *msg="weleco to chat";
+	if(write(fd,msg,sizeof(msg))<0){
+		perror("write error");
+		exit(1);
+	}
 	return client;
 }
 
@@ -106,7 +106,7 @@ int accept_client(int fd){
 	socklen_t len=sizeof(client_addr);
 	int new_fd;
 	while(1){
-		new_fd=accept(fd,(void *)&client_addr,len);
+		new_fd=accept(fd,(void *)&client_addr,&len);
 		if(new_fd==-1){
 			 if (errno == EINTR)
                 		continue; /* Try again. */
@@ -114,12 +114,14 @@ int accept_client(int fd){
 				perror("accept error");
 			 }
 		}
-		break;
+		else{
+			break;
+		}
 	}	
 	char ipstr[1024];
-	inet_ntop(AF_INET,&client_addr,ipstr,sizeof(ipstr));
+	inet_ntop(AF_INET,&client_addr.sin_addr,ipstr,sizeof(ipstr));
 	printf("======IP为%s的用户已加入聊天\n",ipstr);
-	sock_set_nodelay(new_fd);	
+//	sock_set_nodelay(new_fd);	
 	return new_fd;
 }
 void send_msg(const void *msg,int size,int fd){
@@ -134,14 +136,25 @@ void send_msg_to_all(struct client_st *client){
 		}
 	}
 }
-void read_msg(int i){
-	struct client_st *client=server->clients[i];
-	memset(&client->msg,0,MSGSIZE);
+void read_msg(int fd){
+	char msg[1024];
 	int nread;
-        if((nread=read(client->sockfd,client->msg,MSGSIZE))<0){
-		perror("read client msg error");
+	int flag=fcntl(fd,F_GETFL);
+	if(flag==-1){
+		perror("fcntl:");
+		exit(1);
 	}
-        puts(client->msg);
+
+	if(fcntl(fd,F_SETFL,flag|O_NONBLOCK)==-1){
+		perror("fcntl nonenlock");
+		exit(1);
+	}
+
+	if((nread=read(fd,msg,1024))<=0){
+			perror("read client msg error");
+			exit(1);
+	}
+        puts(msg);
 }
 int main(int argc,char *argv[]){
 	server_init();	
@@ -153,7 +166,6 @@ int main(int argc,char *argv[]){
                 for(int i=0;i<=server->clientnums;i++){
                         if(server->clients[i]){
                                 int fd=(server->clients[i])->sockfd; 
-                                FD_SET(fd,&readset);
 				if(maxfd<fd)
 					maxfd=fd;
                         }
@@ -172,17 +184,20 @@ int main(int argc,char *argv[]){
 		else if(res){
 			if(FD_ISSET(server->sockfd,&readset)){
 				int accept_fd=accept_client(server->sockfd);
-				create_client(accept_fd);
+				create_client(accept_fd);	
+                                FD_SET(accept_fd,&readset);
+				printf("client fd is %d",accept_fd);
 			}
 			printf("listen a file change\n");
 			printf("num of client:%d\n",server->clientnums);
 			for(int i=0;i<=server->clientnums;i++){
-				printf("loop client\n");
 				if(server->clients[i]==NULL) continue;
 				int clientfd=server->clients[i]->sockfd;
 				if(FD_ISSET(clientfd,&readset)){
 					printf("have file change\n");
-					read_msg(i);
+					
+					printf("client fd is %d\n",clientfd);
+					read_msg(clientfd);
 					send_msg_to_all(server->clients[i]);	
 				}
 			}
