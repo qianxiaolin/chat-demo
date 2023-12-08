@@ -75,24 +75,23 @@ int create_tcp_server(){
 }
 void server_init(){
 	server=(struct server_st *)malloc(sizeof(struct server_st));	
-        memset(server,0,sizeof(*server));
+        memset(server,0,sizeof(struct server_st));
 	server->sockfd=create_tcp_server();	
 	server->clientnums=-1;	
 }
-void* create_client(int fd){
+struct client_st* create_client(int fd){
 	struct client_st* client=(struct client_st*)malloc(sizeof(struct client_st));
         if(client==NULL){
 		fprintf(stdout,"malloc error\n");
                 return NULL;
         }
-	printf("success create client\n");
 	client->sockfd=fd;
 	server->clientnums++;
 	int clientindex=server->clientnums;
 	server->clients[clientindex]=client;
 
-	char *msg="weleco to chat";
-	if(write(fd,msg,sizeof(msg))<0){
+	char *msg="weleco to chat!\n";
+	if(write(fd,msg,sizeof(msg))<=0){
 		perror("write error");
 		exit(1);
 	}
@@ -100,18 +99,17 @@ void* create_client(int fd){
 }
 
 int accept_client(int fd){
-	printf("=========try_to_accept_client========\n");
-	fflush(stdout);
 	struct sockaddr_in client_addr;
 	socklen_t len=sizeof(client_addr);
 	int new_fd;
 	while(1){
 		new_fd=accept(fd,(void *)&client_addr,&len);
-		if(new_fd==-1){
+		if(new_fd<=0){
 			 if (errno == EINTR)
                 		continue; /* Try again. */
 			 else{
 				perror("accept error");
+				exit(1);
 			 }
 		}
 		else{
@@ -121,24 +119,23 @@ int accept_client(int fd){
 	char ipstr[1024];
 	inet_ntop(AF_INET,&client_addr.sin_addr,ipstr,sizeof(ipstr));
 	printf("======IP为%s的用户已加入聊天\n",ipstr);
-//	sock_set_nodelay(new_fd);	
 	return new_fd;
 }
 void send_msg(const void *msg,int size,int fd){
-	write(fd,msg,size);
-	close(fd);
+	if(write(fd,msg,size)<0){
+		perror("send_msg_to_client_error");
+	}
 }
-void send_msg_to_all(struct client_st *client){
-	for(int i=0;i<server->clientnums;i++){
+void send_msg_to_all(char *msg){
+	for(int i=0;i<=server->clientnums;i++){
 		if(server->clients[i]){
 			struct client_st *send_client=server->clients[i];	
-			send_msg(client->msg,MSGSIZE,send_client->sockfd);	
+			send_msg(msg,sizeof(msg),send_client->sockfd);	
 		}
 	}
 }
 void read_msg(int fd){
 	char msg[1024];
-	int nread;
 	int flag=fcntl(fd,F_GETFL);
 	if(flag==-1){
 		perror("fcntl:");
@@ -150,11 +147,28 @@ void read_msg(int fd){
 		exit(1);
 	}
 
-	if((nread=read(fd,msg,1024))<=0){
+	int nread = read(fd, msg, 1024);
+	if (nread < 0) {
+		if (errno == EAGAIN || errno == EWOULDBLOCK) 
+			;
+		else {
 			perror("read client msg error");
 			exit(1);
+		}
+	} 
+	else if (nread == 0) {
+	    // 连接已关闭
+	    printf("Client disconnected\n");
+	    close(fd);
+	    return;
+	    // 在这里处理连接关闭的逻辑
 	}
-        puts(msg);
+	else {
+	    // 读取到数据
+	    puts(msg);
+	}
+
+	send_msg_to_all(msg);	
 }
 int main(int argc,char *argv[]){
 	server_init();	
@@ -166,6 +180,7 @@ int main(int argc,char *argv[]){
                 for(int i=0;i<=server->clientnums;i++){
                         if(server->clients[i]){
                                 int fd=(server->clients[i])->sockfd; 
+				FD_SET(fd,&readset);
 				if(maxfd<fd)
 					maxfd=fd;
                         }
@@ -185,20 +200,13 @@ int main(int argc,char *argv[]){
 			if(FD_ISSET(server->sockfd,&readset)){
 				int accept_fd=accept_client(server->sockfd);
 				create_client(accept_fd);	
-                                FD_SET(accept_fd,&readset);
-				printf("client fd is %d",accept_fd);
 			}
-			printf("listen a file change\n");
-			printf("num of client:%d\n",server->clientnums);
 			for(int i=0;i<=server->clientnums;i++){
 				if(server->clients[i]==NULL) continue;
 				int clientfd=server->clients[i]->sockfd;
 				if(FD_ISSET(clientfd,&readset)){
-					printf("have file change\n");
 					
-					printf("client fd is %d\n",clientfd);
 					read_msg(clientfd);
-					send_msg_to_all(server->clients[i]);	
 				}
 			}
 

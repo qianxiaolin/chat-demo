@@ -47,10 +47,14 @@ int connect_server(int sd){
 void receive_msg(int sockfd){
 	char buff[BUFFSIZE];
 	int nread=read(sockfd,buff,BUFFSIZE);	
-	if(nread<0){
+	if(nread<=0){
 		perror("read remote msg error");
+		exit(1);
 	}
-	fprintf(stdout,"receive msg:%s",buff);	
+	if(write(STDOUT_FILENO,buff,nread)<0){
+		perror("error to write to stdout");
+		exit(1);
+	}
 }
 void send_msg(int sockfd,char *buff){
 	int nwrite=0;
@@ -89,17 +93,14 @@ int main(int argc,char *argv[]){
 					perror("read");
 					exit(1);
 				}
-				write(STDOUT_FILENO,input,nread);
-				if(write(sd,input,sizeof(input))<0){
+				if(write(sd,input,sizeof(input))<=0){
 					perror("write to sock error");
 				}
 
 			}	
-			/*if(FD_ISSET(sd,&readset)){
-				printf("select listen change\n");
+			if(FD_ISSET(sd,&readset)){
 				receive_msg(sd);
 			}
-			*/
 		}
 	}
 	return 0;
