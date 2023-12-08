@@ -1,3 +1,12 @@
+/*
+ * 	file:client.c
+ * 	description:server programe ,receive message and send message
+ * 	date:2023/12/8
+ * 	author:qianxiao
+ *
+ *
+ *
+ */
 #include<stdio.h>
 #include<errno.h>
 #include <netinet/tcp.h>
@@ -76,8 +85,7 @@ int main(int argc,char *argv[]){
 		}
 		else if(events){
 			if(FD_ISSET(stdin_fd,&readset)){
-			//	send_msg(stdin_fd,fd);
-				int flag=fcntl(stdin_fd,F_GETFL);
+				/*int flag=fcntl(stdin_fd,F_GETFL);
 				if(flag==-1){
 					perror("fcntl:");
 					exit(1);
@@ -87,13 +95,14 @@ int main(int argc,char *argv[]){
 					perror("fcntl nonenlock");
 					exit(1);
 				}
+				*/
 				char input[1024];
 				int nread=read(STDIN_FILENO,input,sizeof(1024));
 				if(nread<0){
 					perror("read");
 					exit(1);
 				}
-				if(write(sd,input,sizeof(input))<=0){
+				if(write(sd,input,nread)<=0){
 					perror("write to sock error");
 				}
 
