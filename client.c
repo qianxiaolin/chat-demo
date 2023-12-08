@@ -1,5 +1,6 @@
 #include<stdio.h>
 #include<errno.h>
+#include <netinet/tcp.h>
 #include<arpa/inet.h>
 #include<sys/types.h>
 #include<stdlib.h>
@@ -7,6 +8,7 @@
 #include<sys/socket.h>
 #include<sys/select.h>
 #include<time.h>
+#include<fcntl.h>
 #include"proto.h" 
 #define BUFFSIZE 1024
 /*socket*/
@@ -28,59 +30,76 @@ int connect_server(int sd){
         addr.sin_port=htons(atoi(SERVER_PORT));
         inet_pton(AF_INET,SERVER_ADDR,&addr.sin_addr);
 	int connected=0;
-        if((fd=connect(sd,(void *)&addr,sizeof(addr)))==-1){
+        if((fd=connect(sd,(void *)&addr,sizeof(addr)))==0){
+		printf("connect fd =%d\n",fd);
+		        }
+	else{
 		if (errno != EINPROGRESS){
                 	perror("connect");
-			return -1;
+			exit(1);
 		}
-        }
-	else{
-		printf("connect fd =%d\n",fd);
+
 	}
 	printf("========success connect=========\n");
 	return fd;
 }
 
-void receive_msg(int fd){
+void receive_msg(int sockfd){
 	char buff[BUFFSIZE];
-	read(fd,buff,BUFFSIZE);	
-	write(stdout,buff,BUFFSIZE);
-}
-void send_msg(int fd){
-	printf("input message:");
-	char input[1024];
-	int nread;
-	if((nread=read(fd,input,BUFFSIZE))<0){
-		perror("read");	
+	int nread=read(sockfd,buff,BUFFSIZE);	
+	if(nread<=0){
+		perror("read remote msg error");
+		exit(1);
 	}
-	write(fd,input,sizeof(input));
+	if(write(STDOUT_FILENO,buff,nread)<0){
+		perror("error to write to stdout");
+		exit(1);
+	}
+}
+void send_msg(int sockfd,char *buff){
+	int nwrite=0;
 }
 int main(int argc,char *argv[]){
 	int sd=socket_init("localhost","1989");
-	int fd=connect_server(sd);
-	if(fd<0){
-		exit(1);
-	}	
+	connect_server(sd);
 	int stdin_fd=fileno(stdin);
 	fd_set readset;
 	while(1){
 		FD_ZERO(&readset);
 		FD_SET(stdin_fd,&readset);
-		FD_SET(fd,&readset);
-
-		int events=select(3,&readset,NULL,NULL,NULL);
+		FD_SET(sd,&readset);
+		int maxfd=stdin_fd>sd?stdin_fd:sd;
+		int events=select(maxfd+1,&readset,NULL,NULL,NULL);
 		if(events<0){
 			perror("select:");
 			exit(1);
 		}
 		else if(events){
 			if(FD_ISSET(stdin_fd,&readset)){
-				printf("send\n");
-				send_msg(fd);
+			//	send_msg(stdin_fd,fd);
+				int flag=fcntl(stdin_fd,F_GETFL);
+				if(flag==-1){
+					perror("fcntl:");
+					exit(1);
+				}
+
+				if(fcntl(stdin_fd,F_SETFL,flag|O_NONBLOCK)==-1){
+					perror("fcntl nonenlock");
+					exit(1);
+				}
+				char input[1024];
+				int nread=read(STDIN_FILENO,input,sizeof(1024));
+				if(nread<0){
+					perror("read");
+					exit(1);
+				}
+				if(write(sd,input,sizeof(input))<=0){
+					perror("write to sock error");
+				}
+
 			}	
-			if(FD_ISSET(fd,&readset)){
-				printf("receive msg");
-				receive_msg(fd);
+			if(FD_ISSET(sd,&readset)){
+				receive_msg(sd);
 			}
 		}
 	}

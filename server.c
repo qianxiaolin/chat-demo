@@ -1,4 +1,5 @@
 #include<string.h>
+#include <netinet/tcp.h>
 #include<errno.h>
 #include<stdio.h>
 #include<stdlib.h>
@@ -7,6 +8,7 @@
 #include<sys/select.h>
 #include<sys/types.h>
 #include<arpa/inet.h>
+#include<fcntl.h>
 #include"proto.h"
 #define MAXCLIENTS 1024 
 #define BUFFSIZE 1024
@@ -23,6 +25,18 @@ struct server_st{
 };
 
 struct server_st *server;
+int sock_set_nodelay(int fd){
+	int flags, yes = 1;
+
+    /* Set the socket nonblocking.
+     * Note that fcntl(2) for F_GETFL and F_SETFL can't be
+     * interrupted by a signal. */
+	if ((flags = fcntl(fd, F_GETFL)) == -1) return -1;
+	if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) return -1;
+
+    /* This is best-effort. No need to check for errors. */
+	return 0;
+}
 
 int create_tcp_server(){
 	int sockfd;
@@ -61,11 +75,11 @@ int create_tcp_server(){
 }
 void server_init(){
 	server=(struct server_st *)malloc(sizeof(struct server_st));	
-        memset(server,0,sizeof(*server));
+        memset(server,0,sizeof(struct server_st));
 	server->sockfd=create_tcp_server();	
 	server->clientnums=-1;	
 }
-void* create_client(int fd){
+struct client_st* create_client(int fd){
 	struct client_st* client=(struct client_st*)malloc(sizeof(struct client_st));
         if(client==NULL){
 		fprintf(stdout,"malloc error\n");
@@ -75,98 +89,130 @@ void* create_client(int fd){
 	server->clientnums++;
 	int clientindex=server->clientnums;
 	server->clients[clientindex]=client;
+
+	char *msg="weleco to chat!\n";
+	if(write(fd,msg,sizeof(msg))<=0){
+		perror("write error");
+		exit(1);
+	}
 	return client;
 }
 
 int accept_client(int fd){
-	printf("=========try_to_accept_client========\n");
-	fflush(stdout);
 	struct sockaddr_in client_addr;
 	socklen_t len=sizeof(client_addr);
 	int new_fd;
 	while(1){
-		new_fd=accept(fd,(void *)&client_addr,len);
-		if(new_fd==-1){
+		new_fd=accept(fd,(void *)&client_addr,&len);
+		if(new_fd<=0){
 			 if (errno == EINTR)
                 		continue; /* Try again. */
 			 else{
 				perror("accept error");
+				exit(1);
 			 }
 		}
-		break;
+		else{
+			break;
+		}
 	}	
 	char ipstr[1024];
-	inet_ntop(AF_INET,&client_addr,ipstr,sizeof(ipstr));
+	inet_ntop(AF_INET,&client_addr.sin_addr,ipstr,sizeof(ipstr));
 	printf("======IP为%s的用户已加入聊天\n",ipstr);
-
 	return new_fd;
 }
 void send_msg(const void *msg,int size,int fd){
-	write(fd,msg,size);
-	close(fd);
+	if(write(fd,msg,size)<0){
+		perror("send_msg_to_client_error");
+	}
 }
-void send_msg_to_all(struct client_st *client){
-	for(int i=0;i<server->clientnums;i++){
+void send_msg_to_all(char *msg){
+	for(int i=0;i<=server->clientnums;i++){
 		if(server->clients[i]){
 			struct client_st *send_client=server->clients[i];	
-			send_msg(client->msg,MSGSIZE,send_client->sockfd);	
+			send_msg(msg,sizeof(msg),send_client->sockfd);	
 		}
 	}
 }
-void read_msg(int i){
-	struct client_st *client=server->clients[i];
-	memset(client->msg,0,MSGSIZE);
-        read(client->sockfd,client->msg,MSGSIZE);
-        puts(client->msg);
+void read_msg(int fd){
+	char msg[1024];
+	int flag=fcntl(fd,F_GETFL);
+	if(flag==-1){
+		perror("fcntl:");
+		exit(1);
+	}
+
+	if(fcntl(fd,F_SETFL,flag|O_NONBLOCK)==-1){
+		perror("fcntl nonenlock");
+		exit(1);
+	}
+
+	int nread = read(fd, msg, 1024);
+	if (nread < 0) {
+		if (errno == EAGAIN || errno == EWOULDBLOCK) 
+			;
+		else {
+			perror("read client msg error");
+			exit(1);
+		}
+	} 
+	else if (nread == 0) {
+	    // 连接已关闭
+	    printf("Client disconnected\n");
+	    close(fd);
+	    return;
+	    // 在这里处理连接关闭的逻辑
+	}
+	else {
+	    // 读取到数据
+	    puts(msg);
+	}
+
+	send_msg_to_all(msg);	
 }
 int main(int argc,char *argv[]){
 	server_init();	
-        fd_set readset;
         while(1){
+        	fd_set readset;
                 FD_ZERO(&readset);
                 FD_SET(server->sockfd,&readset);
-                for(int i=0;i<server->clientnums;i++){
+		int maxfd=0;
+                for(int i=0;i<=server->clientnums;i++){
                         if(server->clients[i]){
                                 int fd=(server->clients[i])->sockfd; 
-				printf("add to set\n");
-                                FD_SET(fd,&readset);
+				FD_SET(fd,&readset);
+				if(maxfd<fd)
+					maxfd=fd;
                         }
                 }
                 struct timeval tv;
-                tv.tv_sec = 2; // 1 sec timeout
+                tv.tv_sec = 1; // 1 sec timeout
                 tv.tv_usec = 0;
-                int maxfd;
-                if(server->clientnums<MAXCLIENTS){
-                        maxfd=server->clientnums+1;
+                if(maxfd<server->sockfd){
+                        maxfd=server->sockfd;
                 }
-		else{
-			maxfd=MAXCLIENTS;
-		}
-                int res=select(maxfd,&readset,NULL,NULL,&tv);
-                if(res<0){
+                int res=select(maxfd+1,&readset,NULL,NULL,NULL);
+                if(res==-1){
                         perror("select() error");
                         exit(1);
                 }
 		else if(res){
-			printf("listen a file change\n");
-		}
-		if(FD_ISSET(server->sockfd,&readset)){
+			if(FD_ISSET(server->sockfd,&readset)){
 				int accept_fd=accept_client(server->sockfd);
-				printf("accept_client\n");
-				FD_SET(accept_fd,&readset);
-				create_client(accept_fd);
-		}
-		for(int i=0;i<server->clientnums;i++){
-			if(server->clients[i]==NULL) continue;
-			int clientfd=server->clients[i]->sockfd;
-			if(FD_ISSET(clientfd,&readset)){
-				printf("have file change\n");
-				read_msg(i);
-				send_msg_to_all(server->clients[i]);	
+				create_client(accept_fd);	
 			}
-		}
-        }
-	
+			for(int i=0;i<=server->clientnums;i++){
+				if(server->clients[i]==NULL) continue;
+				int clientfd=server->clients[i]->sockfd;
+				if(FD_ISSET(clientfd,&readset)){
+					
+					read_msg(clientfd);
+				}
+			}
 
+			
+		}
+	
+	}
 	return 0;
 }
