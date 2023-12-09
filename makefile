@@ -5,5 +5,6 @@ client:client.c proto.h
 server:server.c proto.h
 	$(cc) -g  $^ -o $@ 
 
-
+clean:
+	rm client server
 
