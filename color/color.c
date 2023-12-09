@@ -14,8 +14,12 @@
 
 typedef const char* Color;
 void clean_screen(){
+	printf("\033[2J");
 }
 void clean_line(){
+}
+void set_cursor_xy(int x,int y){
+	fprintf(stdout,"\033[%d;%dH",x,y);
 }
 #define  print_color_text(color,str)\
 	fprintf(stdout,"%s%s\n",(color),(str));
@@ -25,5 +29,7 @@ int main(){
 	print_color_text(GREEN,"hello");
 	print_color_text(YELLOW,"hello");
 	print_color_text(BLUE,"hello");
+	set_cursor_xy(9,0);
+	clean_screen();
 	return 0;
 }
