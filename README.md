@@ -8,3 +8,19 @@
 - 内存管理
 - 终端彩色输出
 - IO封装
+
+## 快速开始
+1. 克隆代码
+```bash
+git clone https://github.com/qianxiaolin/chat-demo.git
+```
+2. 编译代码
+```bash
+make server
+make client
+```
+3. 运行程序
+```
+./server
+./client
+```
