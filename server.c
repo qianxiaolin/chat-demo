@@ -121,16 +121,16 @@ int accept_client(int fd){
 	printf("======IP为%s的用户已加入聊天\n",ipstr);
 	return new_fd;
 }
-void send_msg(const void *msg,int size,int fd){
+void send_msg(const void *msg,ssize_t size,int fd){
 	if(write(fd,msg,size)<0){
 		perror("send_msg_to_client_error");
 	}
 }
-void send_msg_to_all(char *msg){
+void send_msg_to_all(char *msg,ssize_t nread){
 	for(int i=0;i<=server->clientnums;i++){
 		if(server->clients[i]){
 			struct client_st *send_client=server->clients[i];	
-			send_msg(msg,sizeof(msg),send_client->sockfd);	
+			send_msg(msg,nread,send_client->sockfd);	
 		}
 	}
 }
@@ -168,7 +168,7 @@ void read_msg(int fd){
 	    puts(msg);
 	}
 
-	send_msg_to_all(msg);	
+	send_msg_to_all(msg,nread);	
 }
 int main(int argc,char *argv[]){
 	server_init();	

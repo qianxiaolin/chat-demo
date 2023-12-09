@@ -1,3 +1,12 @@
+/*
+ * 	file:client.c
+ * 	description:server programe ,receive message and send message
+ * 	date:2023/12/8
+ * 	author:qianxiao
+ *
+ *
+ *
+ */
 #include<stdio.h>
 #include<errno.h>
 #include <netinet/tcp.h>
@@ -10,7 +19,15 @@
 #include<time.h>
 #include<fcntl.h>
 #include"proto.h" 
+#include<string.h>
 #define BUFFSIZE 1024
+
+
+
+struct msg{
+	char buff[BUFFSIZE];
+	ssize_t len;
+};
 /*socket*/
 int socket_init(const char *ip,const char * port){
 	int fd;
@@ -46,12 +63,14 @@ int connect_server(int sd){
 
 void receive_msg(int sockfd){
 	char buff[BUFFSIZE];
-	int nread=read(sockfd,buff,BUFFSIZE);	
+	ssize_t nread=read(sockfd,buff,BUFFSIZE);	
 	if(nread<=0){
 		perror("read remote msg error");
 		exit(1);
 	}
-	if(write(STDOUT_FILENO,buff,nread)<0){
+	/*清除当前行*/
+	/*光标设置在开头*/
+	if(write(fileno(stdout),buff,nread)<0){
 		perror("error to write to stdout");
 		exit(1);
 	}
@@ -76,8 +95,7 @@ int main(int argc,char *argv[]){
 		}
 		else if(events){
 			if(FD_ISSET(stdin_fd,&readset)){
-			//	send_msg(stdin_fd,fd);
-				int flag=fcntl(stdin_fd,F_GETFL);
+				/*int flag=fcntl(stdin_fd,F_GETFL);
 				if(flag==-1){
 					perror("fcntl:");
 					exit(1);
@@ -87,13 +105,15 @@ int main(int argc,char *argv[]){
 					perror("fcntl nonenlock");
 					exit(1);
 				}
+				*/
+				fflush(fileno(stdin));
 				char input[1024];
-				int nread=read(STDIN_FILENO,input,sizeof(1024));
+				ssize_t nread=read(fileno(stdin),input,1024);
 				if(nread<0){
 					perror("read");
 					exit(1);
 				}
-				if(write(sd,input,sizeof(input))<=0){
+				if(write(sd,input,nread)<=0){
 					perror("write to sock error");
 				}
 
