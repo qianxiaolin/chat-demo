@@ -11,13 +11,26 @@
 #include<errno.h>
 #include<stdlib.h>
 #include<unistd.h>
-#include"proto.h" 
+#include"socket.h"
+#include"rio.h"
+void receive_msg(int sockfd){
+	char buff[BUFFSIZE];
+	ssize_t nread=read_nbyte(sockfd,buff,BUFFSIZE);	
+	if(nread<=0){
+		perror("read remote msg error");
+		exit(1);
+	}
+	if(write(fileno(stdout),buff,nread)<0){
+		perror("error to write to stdout");
+		exit(1);
+	}
+}
 
 
 
 
 int main(int argc,char *argv[]){
-	int sd=socket_init("localhost","1989");
+	int sd=client_init("localhost","1989");
 	connect_server(sd);
 	int stdin_fd=fileno(stdin);
 	fd_set readset;

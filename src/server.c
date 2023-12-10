@@ -1,5 +1,6 @@
 /*
- *
+ * 	file:server.c
+ * 	descirption:server,brocast the message
  *
  *
  *
@@ -9,6 +10,10 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include"socket.h"
+#include<errno.h>
+#include<fcntl.h>
+
+extern struct server_st *server;
 void send_msg_to_all(char *msg,ssize_t nread){
 	for(int i=0;i<=server->clientnums;i++){
 		if(server->clients[i]){

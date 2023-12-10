@@ -12,8 +12,7 @@ ssize_t read_nbyte(int fd,char *buff,ssize_t len){
 			if(errno==EINTR)
 				nread=0;
 			else{
-				perror("read:");
-				exit(1);
+				return -1;
 			}
 		}
 		target-=nread;

@@ -32,7 +32,6 @@ struct server_st{
 	struct client_st *clients[MAXCLIENTS];
 };
 
-
 struct server_st *server;
 struct msg{
 	char buff[BUFFSIZE];
@@ -64,7 +63,4 @@ int create_tcp_server();
 void server_init();
 struct client_st* create_client(int fd);
 int accept_client(int fd);
-void send_msg(const void *msg,ssize_t size,int fd);
-void send_msg_to_all(char *msg,ssize_t nread);
-void read_msg(int fd);
 #endif

@@ -1,4 +1,5 @@
 /*
+ *
  * 	file:client.c
  * 	description:server programe ,receive message and send message
  * 	date:2023/12/8
@@ -18,17 +19,11 @@
 #include<sys/select.h>
 #include<time.h>
 #include<fcntl.h>
-#include"proto.h" 
+#include"socket.h" 
 #include<string.h>
-#define BUFFSIZE 1024
 
 
 
-struct msg{
-	char buff[BUFFSIZE];
-	ssize_t len;
-};
-/*socket*/
 
 
 
@@ -74,39 +69,6 @@ int connect_server(int sd){
 	}
 	return fd;
 }
-
-void receive_msg(int sockfd){
-	char buff[BUFFSIZE];
-	ssize_t nread=read(sockfd,buff,BUFFSIZE);	
-	if(nread<=0){
-		perror("read remote msg error");
-		exit(1);
-	}
-	/*清除当前行*/
-	/*光标设置在开头*/
-	if(write(fileno(stdout),buff,nread)<0){
-		perror("error to write to stdout");
-		exit(1);
-	}
-}
-void send_msg(int sockfd,char *buff){
-	int nwrite=0;
-}
-#define MAXCLIENTS 1024 
-#define BUFFSIZE 1024
-#define MSGSIZE  1024
-struct client_st{ 
-	int sockfd; 
-	char ipaddr[1024];
-	char msg[MSGSIZE]; 
-}; 
-struct server_st{ 
-        int sockfd;/*server socket file */
-	int clientnums;
-	struct client_st *clients[MAXCLIENTS];
-};
-
-struct server_st *server;
 int sock_set_nodelay(int fd){
 	int flags, yes = 1;
 
@@ -203,49 +165,5 @@ void send_msg(const void *msg,ssize_t size,int fd){
 	if(write(fd,msg,size)<0){
 		perror("send_msg_to_client_error");
 	}
-}
-void send_msg_to_all(char *msg,ssize_t nread){
-	for(int i=0;i<=server->clientnums;i++){
-		if(server->clients[i]){
-			struct client_st *send_client=server->clients[i];	
-			send_msg(msg,nread,send_client->sockfd);	
-		}
-	}
-}
-void read_msg(int fd){
-	char msg[1024];
-	int flag=fcntl(fd,F_GETFL);
-	if(flag==-1){
-		perror("fcntl:");
-		exit(1);
-	}
-
-	if(fcntl(fd,F_SETFL,flag|O_NONBLOCK)==-1){
-		perror("fcntl nonenlock");
-		exit(1);
-	}
-
-	int nread = read(fd, msg, 1024);
-	if (nread < 0) {
-		if (errno == EAGAIN || errno == EWOULDBLOCK) 
-			;
-		else {
-			perror("read client msg error");
-			exit(1);
-		}
-	} 
-	else if (nread == 0) {
-	    // 连接已关闭
-	    printf("Client disconnected\n");
-	    close(fd);
-	    return;
-	    // 在这里处理连接关闭的逻辑
-	}
-	else {
-	    // 读取到数据
-	    puts(msg);
-	}
-
-	send_msg_to_all(msg,nread);	
 }
 
