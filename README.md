@@ -16,6 +16,7 @@ git clone https://github.com/qianxiaolin/chat-demo.git
 ```
 2. 编译代码
 ```bash
+cd ./chat-demo
 make server
 make client
 ```
