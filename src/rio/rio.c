@@ -11,6 +11,8 @@ ssize_t read_nbyte(int fd,char *buff,ssize_t len){
 		if((nread=read(fd,buff+index,target))<0){
 			if(errno==EINTR)
 				nread=0;
+			else if(errno==EAGAIN||errno==EWOULDBLOCK)
+				break;
 			else{
 				return -1;
 			}

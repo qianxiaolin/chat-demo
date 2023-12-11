@@ -129,14 +129,14 @@ struct client_st* create_client(int fd){
 	server->clientnums++;
 	int clientindex=server->clientnums;
 	server->clients[clientindex]=client;
+	if(sock_set_nodelay(fd)<0){
+		perror("set no delay error");
+		exit(1);
+	}
 
 	char *msg="weleco to chat!\n";
 	if(write(fd,msg,strlen(msg))<=0){
 		perror("write error");
-		exit(1);
-	}
-	if(sock_set_nodelay(fd)<0){
-		perror("set no delay error");
 		exit(1);
 	}
 	return client;
@@ -164,10 +164,5 @@ int accept_client(int fd){
 	inet_ntop(AF_INET,&client_addr.sin_addr,ipstr,sizeof(ipstr));
 	printf("======IP为%s的用户已加入聊天\n",ipstr);
 	return new_fd;
-}
-void send_msg(const void *msg,ssize_t size,int fd){
-	if(write(fd,msg,size)<0){
-		perror("send_msg_to_client_error");
-	}
 }
 

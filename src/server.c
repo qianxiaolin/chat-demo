@@ -9,11 +9,18 @@
  */
 #include<stdio.h>
 #include<stdlib.h>
-#include"socket.h"
 #include<errno.h>
 #include<fcntl.h>
 #include<string.h>
+#include"socket.h"
+#include"rio.h"
 extern struct server_st *server;
+void send_msg(char *msg,size_t size,int fd){
+	if(write(fd,msg,size)<0){
+		perror("send_msg_to_client_error");
+	}
+}
+
 void send_msg_to_all(char *msg){
 	for(int i=0;i<=server->clientnums;i++){
 		if(server->clients[i]){
@@ -36,7 +43,7 @@ void read_msg(int fd){
 		exit(1);
 	}
 
-	int nread = read(fd, msg, 1024);
+	int nread = read_nbyte(fd, msg, 1024);
 	if (nread < 0) {
 		if (errno == EAGAIN || errno == EWOULDBLOCK) 
 			;

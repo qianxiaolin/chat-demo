@@ -56,7 +56,6 @@ struct msg{
 int client_init(const char *ip,const char * port);
 int connect_server(int sd);
 
-void receive_msg(int sockfd);
 int sock_set_nodelay(int fd);
 
 int create_tcp_server();

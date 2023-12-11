@@ -13,28 +13,7 @@
 #include<unistd.h>
 #include"socket.h"
 #include<fcntl.h>
-ssize_t read_nbyte(int fd,char *buff,ssize_t len){
-	int nread=0;
-	int target=len;
-	int index=0;
-	printf("start to read\n");
-	while(target>0){
-		if((nread=read(fd,buff+index,target))<0){
-			if(errno==EINTR)
-				nread=0;
-			else if(errno==EAGAIN||errno==EWOULDBLOCK)
-				break;
-			else{
-				return -1;
-			}
-		}
-		target-=nread;
-		index+=nread;
-
-	}
-	return (len-target);
-}
-
+#include"rio.h"
 void receive_msg(int sockfd){
 	char buff[BUFFSIZE];
 	ssize_t nread=read_nbyte(sockfd,buff,BUFFSIZE);	
@@ -100,7 +79,12 @@ int main(int argc,char *argv[]){
 				char input[1024];
 				ssize_t nread=read_nbyte(fileno(stdin),input,1024);
 				if(nread<=0){
-					perror("read");
+					if(nread==0){
+						printf("conenct error");
+					}
+					else{
+						perror("read");
+					}
 					exit(1);
 				}
 				input[nread]='\0';
