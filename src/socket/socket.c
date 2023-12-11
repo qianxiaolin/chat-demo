@@ -131,8 +131,12 @@ struct client_st* create_client(int fd){
 	server->clients[clientindex]=client;
 
 	char *msg="weleco to chat!\n";
-	if(write(fd,msg,sizeof(msg))<=0){
+	if(write(fd,msg,strlen(msg))<=0){
 		perror("write error");
+		exit(1);
+	}
+	if(sock_set_nodelay(fd)<0){
+		perror("set no delay error");
 		exit(1);
 	}
 	return client;

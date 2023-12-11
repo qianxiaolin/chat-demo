@@ -12,13 +12,13 @@
 #include"socket.h"
 #include<errno.h>
 #include<fcntl.h>
-
+#include<string.h>
 extern struct server_st *server;
-void send_msg_to_all(char *msg,ssize_t nread){
+void send_msg_to_all(char *msg){
 	for(int i=0;i<=server->clientnums;i++){
 		if(server->clients[i]){
 			struct client_st *send_client=server->clients[i];	
-			send_msg(msg,nread,send_client->sockfd);	
+			send_msg(msg,strlen(msg),send_client->sockfd);	
 		}
 	}
 }
@@ -52,10 +52,10 @@ void read_msg(int fd){
 	}
 	else {
 	    // 读取到数据
-	    puts(msg);
+	    fprintf(stdout,"%s\n",msg);
+	    send_msg_to_all(msg);	
 	}
 
-	send_msg_to_all(msg,nread);	
 }
 int main(int argc,char *argv[]){
 	server_init();	

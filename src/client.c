@@ -12,12 +12,39 @@
 #include<stdlib.h>
 #include<unistd.h>
 #include"socket.h"
-#include"rio.h"
+#include<fcntl.h>
+ssize_t read_nbyte(int fd,char *buff,ssize_t len){
+	int nread=0;
+	int target=len;
+	int index=0;
+	printf("start to read\n");
+	while(target>0){
+		if((nread=read(fd,buff+index,target))<0){
+			if(errno==EINTR)
+				nread=0;
+			else if(errno==EAGAIN||errno==EWOULDBLOCK)
+				break;
+			else{
+				return -1;
+			}
+		}
+		target-=nread;
+		index+=nread;
+
+	}
+	return (len-target);
+}
+
 void receive_msg(int sockfd){
 	char buff[BUFFSIZE];
 	ssize_t nread=read_nbyte(sockfd,buff,BUFFSIZE);	
 	if(nread<=0){
-		perror("read remote msg error");
+		if(nread==0){
+			printf("server disconnected");
+		}
+		else{
+			perror("read remote msg error");
+		}
 		exit(1);
 	}
 	if(write(fileno(stdout),buff,nread)<0){
@@ -34,6 +61,28 @@ int main(int argc,char *argv[]){
 	connect_server(sd);
 	int stdin_fd=fileno(stdin);
 	fd_set readset;
+	int flag = fcntl(sd, F_GETFL);
+	if (flag == -1) {
+	    perror("fcntl:");
+	    exit(1);
+	}
+
+	if (fcntl(sd, F_SETFL, flag | O_NONBLOCK) == -1) {
+	    perror("fcntl nonenlock");
+	    exit(1);
+	}
+	flag = fcntl(stdin_fd, F_GETFL);
+	if (flag == -1) {
+	    perror("fcntl:");
+	    exit(1);
+	}
+
+	if (fcntl(stdin_fd, F_SETFL, flag | O_NONBLOCK) == -1) {
+	    perror("fcntl nonenlock");
+	    exit(1);
+	}
+
+
 	while(1){
 		FD_ZERO(&readset);
 		FD_SET(stdin_fd,&readset);
@@ -46,24 +95,25 @@ int main(int argc,char *argv[]){
 		}
 		else if(events){
 			if(FD_ISSET(stdin_fd,&readset)){
-				/*int flag=fcntl(stdin_fd,F_GETFL);
-				if(flag==-1){
-					perror("fcntl:");
-					exit(1);
-				}
-
-				if(fcntl(stdin_fd,F_SETFL,flag|O_NONBLOCK)==-1){
-					perror("fcntl nonenlock");
-					exit(1);
-				}*/
+				
+				fflush(stdin);
 				char input[1024];
-				ssize_t nread=read(fileno(stdin),input,1024);
-				if(nread<0){
+				ssize_t nread=read_nbyte(fileno(stdin),input,1024);
+				if(nread<=0){
 					perror("read");
 					exit(1);
 				}
+				input[nread]='\0';
+				fprintf(stdout,"%s\n",input);
 				if(write(sd,input,nread)<=0){
-					perror("write to sock error");
+					if (errno == EAGAIN || errno == EWOULDBLOCK) {
+					// 缓冲区已满，稍后再尝试写入
+						continue;
+					} 
+					else {
+						perror("write to sock error");
+						exit(1);
+				    	}
 				}
 
 			}	
