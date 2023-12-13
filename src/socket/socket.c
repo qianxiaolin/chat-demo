@@ -118,6 +118,11 @@ void server_init(){
         memset(server,0,sizeof(struct server_st));
 	server->sockfd=create_tcp_server();	
 	server->clientnums=-1;	
+	if(sock_set_nodelay(server->sockfd)<0){
+		perror("set no delay error");
+		exit(1);
+	}
+
 }
 struct client_st* create_client(int fd){
 	struct client_st* client=(struct client_st*)malloc(sizeof(struct client_st));
