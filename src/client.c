@@ -88,8 +88,11 @@ int main(int argc,char *argv[]){
 					exit(1);
 				}
 				input[nread]='\0';
-				fprintf(stdout,"%s\n",input);
 				if(write(sd,input,nread)<=0){
+					perror("write to error");
+					exit(1);
+				}
+				/*if(write(sd,input,nread)<=0){
 					if (errno == EAGAIN || errno == EWOULDBLOCK) {
 					// 缓冲区已满，稍后再尝试写入
 						continue;
@@ -98,7 +101,7 @@ int main(int argc,char *argv[]){
 						perror("write to sock error");
 						exit(1);
 				    	}
-				}
+				}*/
 
 			}	
 			if(FD_ISSET(sd,&readset)){

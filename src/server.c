@@ -16,7 +16,7 @@
 #include"rio.h"
 extern struct server_st *server;
 void send_msg(char *msg,size_t size,int fd){
-	if(write(fd,msg,size)<0){
+	if(write(fd,msg,size)<=0){
 		perror("send_msg_to_client_error");
 	}
 }
@@ -59,7 +59,11 @@ void read_msg(int fd){
 	}
 	else {
 	    // 读取到数据
-	    fprintf(stdout,"%s\n",msg);
+	    if(write(fileno(stdout),msg,strlen(msg))<0){
+		    perror("write to std");
+		    exit(1);
+	    }
+	    //fflush(stdout);
 	    send_msg_to_all(msg);	
 	}
 
