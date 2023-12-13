@@ -63,6 +63,7 @@ int main(int argc,char *argv[]){
 
 
 	while(1){
+		fflush(stdin);
 		FD_ZERO(&readset);
 		FD_SET(stdin_fd,&readset);
 		FD_SET(sd,&readset);
@@ -75,7 +76,6 @@ int main(int argc,char *argv[]){
 		else if(events){
 			if(FD_ISSET(stdin_fd,&readset)){
 				
-				fflush(stdin);
 				char input[1024];
 				ssize_t nread=read_nbyte(fileno(stdin),input,1024);
 				if(nread<=0){
