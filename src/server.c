@@ -33,7 +33,6 @@ void read_msg(int fd){
 	char msg[1024];
 	int flag=fcntl(fd,F_GETFL);
 
-	/*set nonenlock*/
 	if(flag==-1){
 		perror("fcntl:");
 		exit(1);
@@ -42,11 +41,11 @@ void read_msg(int fd){
 		perror("fcntl nonenlock");
 		exit(1);
 	}
-
-	int nread = read_nbyte(fd, msg, 1024);
+	
+	int nread = read(fd, msg, 1024);
 	if (nread < 0) {
 		if (errno == EAGAIN || errno == EWOULDBLOCK) 
-			;
+			return;
 		else {
 			perror("read client msg error");
 			exit(1);
@@ -70,8 +69,8 @@ void read_msg(int fd){
 }
 int main(int argc,char *argv[]){
 	server_init();	
+        fd_set readset;
         while(1){
-        	fd_set readset;
                 FD_ZERO(&readset);
                 FD_SET(server->sockfd,&readset);
 		int maxfd=0;
@@ -98,7 +97,7 @@ int main(int argc,char *argv[]){
                         perror("select() error");
                         exit(1);
                 }
-		else if(res){
+		else if(res>0){
 			/*listen connect*/
 			if(FD_ISSET(server->sockfd,&readset)){
 				int accept_fd=accept_client(server->sockfd);

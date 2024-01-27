@@ -59,7 +59,7 @@ int connect_server(int sd){
 	int connected=0;
         if((fd=connect(sd,(void *)&addr,sizeof(addr)))==0){
 		printf("connect fd =%d\n",fd);
-		        }
+	}
 	else{
 		if (errno != EINPROGRESS){
                 	perror("connect");

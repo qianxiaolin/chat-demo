@@ -11,9 +11,11 @@ ssize_t read_nbyte(int fd,char *buff,ssize_t len){
 		if((nread=read(fd,buff+index,target))<0){
 			if(errno==EINTR)
 				nread=0;
+			//EAGAIN:表示非阻塞下没有数据可读
 			else if(errno==EAGAIN||errno==EWOULDBLOCK)
 				break;
 			else{
+				perror("read");
 				return -1;
 			}
 		}
@@ -28,7 +30,7 @@ ssize_t write_nbyte(int fd,char *buff,ssize_t buffsize){
 	int nwrite=0;
 	int index=0;
 	while(target){
-		if(write(fd,buff,target)<=0){
+		if(write(fd,buff+index,target)<=0){
 			if(errno==EINTR)
 				nwrite=0;
 			else{
@@ -39,7 +41,6 @@ ssize_t write_nbyte(int fd,char *buff,ssize_t buffsize){
 		target-=nwrite;
 		index+=nwrite;
 
-
 	}
-
+	return buffsize-target;
 }
