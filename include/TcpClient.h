@@ -37,10 +37,14 @@ struct msg{
 class TcpClient
 {
 public:
-    int client_init(const char *ip,const char * port);
-    int connect_server(int sd);
+    TcpClient();
+    bool Create();
+    int Connect(int sd);
+    int ClientInit(const char *ip,const char * port);
     int sock_set_nodelay(int fd);
+    ~TcpClient();
 private:
+    struct sockaddr_in addr;
     int sockfd; 
     char* ip;
     char* port;
