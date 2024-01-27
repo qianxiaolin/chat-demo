@@ -1,5 +1,5 @@
-#ifndef _RIO_H_
-#define _RIO_H_
+#ifndef __TCPMSG__
+#define __TCPMSG__
 
 
 ssize_t read_nbyte(int fd,char* buff,ssize_t len);

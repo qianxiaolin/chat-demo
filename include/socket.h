@@ -27,7 +27,7 @@ struct client_st{
 	char msg[MSGSIZE]; 
 }; 
 struct server_st{ 
-        int sockfd;/*server socket file */
+    int sockfd;/*server socket file */
 	int clientnums;
 	struct client_st *clients[MAXCLIENTS];
 };
