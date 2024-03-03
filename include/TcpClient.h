@@ -38,9 +38,7 @@ class TcpClient
 {
 public:
     TcpClient();
-    bool Create();
-    int Connect(int sd);
-    int ClientInit(const char *ip,const char * port);
+    bool Open(const String url,int port);
     int sock_set_nodelay(int fd);
     ~TcpClient();
 private:

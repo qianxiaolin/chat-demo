@@ -19,15 +19,9 @@
  {
 
  }
-bool TcpClient::Create()
-{
 
-}
-int TcpClient::ClientInit(const char *ip,const char * port)
+bool TcpClient::Open(const String ip,int port)
 {
-
-}
-int TcpClient::Connect(int sd){
 	int fd;
 	fprintf(stdout,"=======connect to server=========\n");
 	struct sockaddr_in addr;
@@ -46,7 +40,9 @@ int TcpClient::Connect(int sd){
 
 	}
 	return fd;
+
 }
+
 int TcpClient::sock_set_nodelay(int fd){
     int flag = fcntl(sd, F_GETFL);
 	if (flag == -1) {
